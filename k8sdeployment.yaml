@@ -18,7 +18,7 @@ spec:
       - name: financeme-container
         image: manjunathachar/financeapp:latest
         ports:
-        - containerPort: 8080
+        - containerPort: 8083
 ---
 apiVersion: v1
 kind: Service
@@ -32,5 +32,5 @@ spec:
   type: NodePort
   ports:
   - nodePort: 31664
-    port: 8778
-    targetPort: 8778
+    port: 8083
+    targetPort: 8083
