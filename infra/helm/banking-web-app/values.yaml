@@ -1,0 +1,186 @@
+# Default values for banking-web-app.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: turintondev.azurecr.io/mysqldataconnector
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: MYSQL_DC_TAG
+
+imagePullSecrets: 
+  - name: regcred
+  
+nameOverride: ""
+fullnameOverride: "banking-web-app"
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "pod-runner"
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+env:
+  - name: FRONT_END_URL
+    valueFrom:
+      configMapKeyRef:
+        name: banking-web-app-cm
+        key: FRONT_END_URL 
+  
+  # Removed valueFrom for KAFKA_BOOTSTRAP_SERVERS since it's defined with a direct value in the deployment
+  - name: KAFKA_BOOTSTRAP_SERVERS
+    value: "kafka.turinton-dev.svc.cluster.local:29092"
+        
+  - name: CONSUL_HOST
+    valueFrom:
+      configMapKeyRef:
+        name: banking-web-app-cm
+        key: CONSUL_HOST
+        
+  - name: CONSUL_PORT
+    valueFrom:
+      configMapKeyRef:
+        name: banking-web-app-cm
+        key: CONSUL_PORT 
+
+  - name: REDIS_HOST
+    valueFrom:
+      configMapKeyRef:
+        name: banking-web-app-cm
+        key: REDIS_HOST 
+
+  - name: REDIS_PORT
+    valueFrom:
+      configMapKeyRef:
+        name: banking-web-app-cm
+        key: REDIS_PORT
+
+  - name: REDIS_PASSWORD
+    valueFrom:
+      configMapKeyRef:
+        name: banking-web-app-cm
+        key: REDIS_PASSWORD      
+
+  - name: MANAGER_SERVICE_HOST
+    valueFrom:
+      configMapKeyRef:
+        name: banking-web-app-cm
+        key: MANAGER_SERVICE_HOST
+
+  - name: MANAGER_SERVICE_PORT
+    valueFrom:
+      configMapKeyRef:
+        name: banking-web-app-cm
+        key: MANAGER_SERVICE_PORT
+          
+  
+        
+service:
+  type: ClusterIP
+  port: 8718
+  # loadBalancerIP: 135.237.28.220  # Static IP for the backend service
+  # annotations:
+  #   service.beta.kubernetes.io/azure-dns-label-name: "turinton-backend" # Azure DNS label
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources: 
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  limits:
+    cpu: 2000m
+    memory: 8000Mi
+  requests:
+    cpu: 1000m
+    memory: 6000Mi
+
+# livenessProbe:
+#   httpGet:
+#     path: /
+#     port: http
+# readinessProbe:
+#   httpGet:
+#     path: /
+#     port: http
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+# - name: foo
+#   secret:
+#     secretName: mysecret
+#     optional: false
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
+nodeSelector:
+  environment: "dev"
+  purpose: "dev-environment"
+
+tolerations:
+- key: "environment"
+  operator: "Equal"
+  value: "dev"
+  effect: "NoSchedule"
+
+affinity: {}
+
+config:
+  PAGINATION_LIMIT: "5000"
+  PAGINATION_OFFSET: "0"
+  FRONT_END_URL: "http://admin-frontend:3000"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka.turinton-dev.svc.cluster.local:29092"
+  CONSUL_HOST: "consul-server.consul.svc.cluster.local"
+  CONSUL_PORT: "8500"
+  REDIS_HOST: "redis.turinton-stage.svc.cluster.local"
+  REDIS_PORT: "6379"
+  REDIS_PASSWORD: "ihKYe9dz3Gg71u1K8pJtO4Pg"
+  MANAGER_SERVICE_HOST: "http://connections-manager"  
+  MANAGER_SERVICE_PORT: "8929"
