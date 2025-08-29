@@ -2,185 +2,164 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-replicaCount: 1
+replicaCount: 2
 
 image:
-  repository: turintondev.azurecr.io/mysqldataconnector
-  pullPolicy: IfNotPresent
+  repository: manjunathachar/banking-web-app
+  pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: MYSQL_DC_TAG
+  tag: "latest"
 
-imagePullSecrets: 
+imagePullSecrets:
   - name: regcred
-  
+
 nameOverride: ""
 fullnameOverride: "banking-web-app"
 
 serviceAccount:
   # Specifies whether a service account should be created
-  create: false
+  create: true
   # Automatically mount a ServiceAccount's API credentials?
   automount: true
   # Annotations to add to the service account
   annotations: {}
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
-  name: "pod-runner"
+  name: "banking-web-app-sa"
 
 podAnnotations: {}
-podLabels: {}
+podLabels: 
+  app: banking-web-app
+  version: v1
 
-podSecurityContext: {}
-  # fsGroup: 2000
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 2000
 
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
 
+# Environment variables - direct values instead of ConfigMap references
 env:
+  - name: SPRING_PROFILES_ACTIVE
+    value: "production"
+    
+  - name: SERVER_PORT
+    value: "8083"
+    
+  - name: PAGINATION_LIMIT
+    value: "5000"
+    
+  - name: PAGINATION_OFFSET
+    value: "0"
+    
   - name: FRONT_END_URL
-    valueFrom:
-      configMapKeyRef:
-        name: banking-web-app-cm
-        key: FRONT_END_URL 
-  
-  # Removed valueFrom for KAFKA_BOOTSTRAP_SERVERS since it's defined with a direct value in the deployment
+    value: "http://banking-web-app-frontend:3000"
+
   - name: KAFKA_BOOTSTRAP_SERVERS
-    value: "kafka.turinton-dev.svc.cluster.local:29092"
-        
+    value: "kafka.kafka.svc.cluster.local:9092"
+
   - name: CONSUL_HOST
-    valueFrom:
-      configMapKeyRef:
-        name: banking-web-app-cm
-        key: CONSUL_HOST
-        
+    value: "consul-server.consul.svc.cluster.local"
+
   - name: CONSUL_PORT
-    valueFrom:
-      configMapKeyRef:
-        name: banking-web-app-cm
-        key: CONSUL_PORT 
+    value: "8500"
 
   - name: REDIS_HOST
-    valueFrom:
-      configMapKeyRef:
-        name: banking-web-app-cm
-        key: REDIS_HOST 
+    value: "redis.redis.svc.cluster.local"
 
   - name: REDIS_PORT
-    valueFrom:
-      configMapKeyRef:
-        name: banking-web-app-cm
-        key: REDIS_PORT
+    value: "6379"
 
   - name: REDIS_PASSWORD
-    valueFrom:
-      configMapKeyRef:
-        name: banking-web-app-cm
-        key: REDIS_PASSWORD      
+    value: "ihKYe9dz3Gg71u1K8pJtO4Pg"
 
   - name: MANAGER_SERVICE_HOST
-    valueFrom:
-      configMapKeyRef:
-        name: banking-web-app-cm
-        key: MANAGER_SERVICE_HOST
+    value: "http://connections-manager.default.svc.cluster.local"
 
   - name: MANAGER_SERVICE_PORT
-    valueFrom:
-      configMapKeyRef:
-        name: banking-web-app-cm
-        key: MANAGER_SERVICE_PORT
-          
-  
-        
+    value: "8929"
+
+# Health checks
+livenessProbe:
+  httpGet:
+    path: /actuator/health
+    port: 8083
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness
+    port: 8083
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
 service:
-  type: ClusterIP
+  type: LoadBalancer
   port: 8718
-  # loadBalancerIP: 135.237.28.220  # Static IP for the backend service
-  # annotations:
-  #   service.beta.kubernetes.io/azure-dns-label-name: "turinton-backend" # Azure DNS label
+  targetPort: 8083
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
 
 ingress:
   enabled: false
   className: ""
   annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
   hosts:
-    - host: chart-example.local
+    - host: banking-web-app.example.com
       paths:
         - path: /
-          pathType: ImplementationSpecific
+          pathType: Prefix
   tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
 
-resources: 
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+resources:
   limits:
-    cpu: 2000m
-    memory: 8000Mi
-  requests:
     cpu: 1000m
-    memory: 6000Mi
-
-# livenessProbe:
-#   httpGet:
-#     path: /
-#     port: http
-# readinessProbe:
-#   httpGet:
-#     path: /
-#     port: http
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
 
 autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
 
 # Additional volumes on the output Deployment definition.
 volumes: []
-# - name: foo
-#   secret:
-#     secretName: mysecret
-#     optional: false
 
 # Additional volumeMounts on the output Deployment definition.
 volumeMounts: []
-# - name: foo
-#   mountPath: "/etc/foo"
-#   readOnly: true
 
 nodeSelector:
-  environment: "dev"
-  purpose: "dev-environment"
+  kubernetes.io/os: linux
 
-tolerations:
-- key: "environment"
-  operator: "Equal"
-  value: "dev"
-  effect: "NoSchedule"
+tolerations: []
 
-affinity: {}
-
-config:
-  PAGINATION_LIMIT: "5000"
-  PAGINATION_OFFSET: "0"
-  FRONT_END_URL: "http://admin-frontend:3000"
-  KAFKA_BOOTSTRAP_SERVERS: "kafka.turinton-dev.svc.cluster.local:29092"
-  CONSUL_HOST: "consul-server.consul.svc.cluster.local"
-  CONSUL_PORT: "8500"
-  REDIS_HOST: "redis.turinton-stage.svc.cluster.local"
-  REDIS_PORT: "6379"
-  REDIS_PASSWORD: "ihKYe9dz3Gg71u1K8pJtO4Pg"
-  MANAGER_SERVICE_HOST: "http://connections-manager"  
-  MANAGER_SERVICE_PORT: "8929"
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app
+            operator: In
+            values:
+            - banking-web-app
+        topologyKey: kubernetes.io/hostname
