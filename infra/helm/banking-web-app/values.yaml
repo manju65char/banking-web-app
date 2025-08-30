@@ -7,7 +7,6 @@ replicaCount: 2
 image:
   repository: manjunathachar/banking-web-app
   pullPolicy: Always
-  # Overrides the image tag whose default is the chart appVersion.
   tag: "latest"
 
 imagePullSecrets:
@@ -17,17 +16,13 @@ nameOverride: ""
 fullnameOverride: "banking-web-app"
 
 serviceAccount:
-  # Specifies whether a service account should be created
   create: true
-  # Automatically mount a ServiceAccount's API credentials?
   automount: true
-  # Annotations to add to the service account
   annotations: {}
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
   name: "banking-web-app-sa"
 
 podAnnotations: {}
+
 podLabels: 
   app: banking-web-app
   version: v1
@@ -46,65 +41,14 @@ securityContext:
   runAsNonRoot: true
   runAsUser: 1000
 
-# Environment variables - direct values instead of ConfigMap references
+# Essential environment variables only
 env:
-  - name: SPRING_PROFILES_ACTIVE
-    value: "production"
-    
   - name: SERVER_PORT
     value: "8083"
-    
-  - name: PAGINATION_LIMIT
-    value: "5000"
-    
-  - name: PAGINATION_OFFSET
-    value: "0"
-    
-  - name: FRONT_END_URL
-    value: "http://banking-web-app-frontend:3000"
+  - name: SPRING_PROFILES_ACTIVE
+    value: "production"
 
-  - name: KAFKA_BOOTSTRAP_SERVERS
-    value: "kafka.kafka.svc.cluster.local:9092"
-
-  - name: CONSUL_HOST
-    value: "consul-server.consul.svc.cluster.local"
-
-  - name: CONSUL_PORT
-    value: "8500"
-
-  - name: REDIS_HOST
-    value: "redis.redis.svc.cluster.local"
-
-  - name: REDIS_PORT
-    value: "6379"
-
-  - name: REDIS_PASSWORD
-    value: "ihKYe9dz3Gg71u1K8pJtO4Pg"
-
-  - name: MANAGER_SERVICE_HOST
-    value: "http://connections-manager.default.svc.cluster.local"
-
-  - name: MANAGER_SERVICE_PORT
-    value: "8929"
-
-# Health checks
-livenessProbe:
-  httpGet:
-    path: /actuator/health
-    port: 8083
-  initialDelaySeconds: 60
-  periodSeconds: 30
-  timeoutSeconds: 10
-  failureThreshold: 3
-
-readinessProbe:
-  httpGet:
-    path: /actuator/health/readiness
-    port: 8083
-  initialDelaySeconds: 30
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 3
+# Health checks removed - let Kubernetes handle basic container health
 
 service:
   type: LoadBalancer
@@ -116,22 +60,14 @@ service:
 
 ingress:
   enabled: false
-  className: ""
-  annotations: {}
-  hosts:
-    - host: banking-web-app.example.com
-      paths:
-        - path: /
-          pathType: Prefix
-  tls: []
 
 resources:
   limits:
     cpu: 1000m
     memory: 2Gi
   requests:
-    cpu: 500m
-    memory: 1Gi
+    cpu: 250m
+    memory: 256m
 
 autoscaling:
   enabled: true
@@ -140,26 +76,10 @@ autoscaling:
   targetCPUUtilizationPercentage: 70
   targetMemoryUtilizationPercentage: 80
 
-# Additional volumes on the output Deployment definition.
-volumes: []
-
-# Additional volumeMounts on the output Deployment definition.
-volumeMounts: []
-
 nodeSelector:
   kubernetes.io/os: linux
+  role: user
 
 tolerations: []
 
-affinity:
-  podAntiAffinity:
-    preferredDuringSchedulingIgnoredDuringExecution:
-    - weight: 100
-      podAffinityTerm:
-        labelSelector:
-          matchExpressions:
-          - key: app
-            operator: In
-            values:
-            - banking-web-app
-        topologyKey: kubernetes.io/hostname
+# Pod affinity removed - using simple node selector instead
