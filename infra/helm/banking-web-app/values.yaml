@@ -51,12 +51,9 @@ env:
 # Health checks removed - let Kubernetes handle basic container health
 
 service:
-  type: LoadBalancer
-  port: 8718
+  type: ClusterIP
+  port: 80
   targetPort: 8083
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
 
 ingress:
   enabled: false
@@ -66,11 +63,11 @@ resources:
     cpu: 1000m
     memory: 2Gi
   requests:
-    cpu: 250m
-    memory: 256m
+    cpu: 500m
+    memory: 1Gi
 
 autoscaling:
-  enabled: false
+  enabled: true
   minReplicas: 2
   maxReplicas: 10
   targetCPUUtilizationPercentage: 70
