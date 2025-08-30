@@ -2,6 +2,8 @@ pipeline {
     agent any
     
     environment {
+        JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
+        PATH = "$JAVA_HOME/bin:$PATH"
         PROJECT_NAME = "banking-web-app"
         RELEASE_NAME = "banking-web-app"
         DOCKER_IMAGE = 'manjunathachar/banking-web-app'
@@ -76,8 +78,6 @@ pipeline {
                         usernameVariable: 'DOCKER_USERNAME'
                     )]) {
                         sh '''
-                            export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-                            export PATH=$JAVA_HOME/bin:$PATH
                             echo "Logging into Docker Hub..."
                             echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
                         '''
@@ -140,46 +140,6 @@ pipeline {
                           --set image.tag=${env.BUILD_NUMBER} \
                           --wait --timeout=10m
                     """
-                }
-            }
-        }alsId: env.KUBECONFIG_CREDENTIAL, variable: 'KUBECONFIG_CONTENT')]) {
-                        // Write kubeconfig to temporary file
-                        writeFile file: 'kubeconfig', text: env.KUBECONFIG_CONTENT
-                        
-                        // Create namespace if it doesn't exist
-                        sh """
-                            export KUBECONFIG=\$(pwd)/kubeconfig
-                            kubectl get namespace ${env.NAMESPACE} || kubectl create namespace ${env.NAMESPACE}
-                        """
-                        
-                        // Create Docker registry secret if it doesn't exist
-                        withCredentials([usernamePassword(
-                            credentialsId: env.DOCKERHUB_CREDENTIAL, 
-                            passwordVariable: 'DOCKER_PASSWORD', 
-                            usernameVariable: 'DOCKER_USERNAME'
-                        )]) {
-                            sh """
-                                export KUBECONFIG=\$(pwd)/kubeconfig
-                                kubectl delete secret ${env.IMAGE_SECRET} -n ${env.NAMESPACE} --ignore-not-found
-                                kubectl create secret docker-registry ${env.IMAGE_SECRET} \
-                                  --docker-server=https://index.docker.io/v1/ \
-                                  --docker-username=${DOCKER_USERNAME} \
-                                  --docker-password=${DOCKER_PASSWORD} \
-                                  --docker-email=manjunathachar@example.com \
-                                  -n ${env.NAMESPACE}
-                            """
-                        }
-                        
-                        // Deploy using Helm
-                        sh """
-                            export KUBECONFIG=\$(pwd)/kubeconfig
-                            helm upgrade --install ${env.RELEASE_NAME} ${env.CHART_PATH} \
-                              --namespace ${env.NAMESPACE} \
-                              --set image.repository=${env.DOCKER_IMAGE} \
-                              --set image.tag=${env.BUILD_NUMBER} \
-                              --wait --timeout=10m
-                        """
-                    }
                 }
             }
         }
@@ -249,7 +209,7 @@ pipeline {
         
         failure {
             script {
-                echo "❌ Pipeline failed at build ${env.BUILD_NUMBER}"
+                echo "Pipeline failed at build ${env.BUILD_NUMBER}"
                 echo "Check logs above for error details"
             }
         }
