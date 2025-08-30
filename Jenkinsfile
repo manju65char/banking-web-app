@@ -1,12 +1,9 @@
 pipeline {
     agent any
     
-    tools {
-        jdk 'jdk-21'
-        maven 'maven-3.9'
-    }
-    
     environment {
+        JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
+        PATH = "$JAVA_HOME/bin:$PATH"
         PROJECT_NAME = "banking-web-app"
         RELEASE_NAME = "banking-web-app"
         DOCKER_IMAGE = 'manjunathachar/banking-web-app'
@@ -22,7 +19,17 @@ pipeline {
             steps {
                 script {
                     echo 'Building application with Maven...'
-                    sh 'mvn -B package --file pom.xml -DskipTests'
+                    sh '''
+                        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+                        export PATH=$JAVA_HOME/bin:$PATH
+                        echo "JAVA_HOME: $JAVA_HOME"
+                        echo "PATH: $PATH"
+                        echo "Java version check:"
+                        java --version
+                        echo "Maven version check:"
+                        mvn --version
+                        mvn -B package --file pom.xml -DskipTests
+                    '''
                     
                     // Archive artifacts
                     archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: false
@@ -34,12 +41,16 @@ pipeline {
             steps {
                 script {
                     echo 'Running tests...'
-                    sh 'mvn test'
+                    sh '''
+                        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+                        export PATH=$JAVA_HOME/bin:$PATH
+                        mvn test
+                    '''
                 }
             }
             post {
                 always {
-                    publishTestResults testResultsPattern: 'target/surefire-reports/*.xml'
+                    junit 'target/surefire-reports/*.xml'
                 }
             }
         }
@@ -49,10 +60,10 @@ pipeline {
                 script {
                     echo 'Building Docker image...'
                     sh """
-                        docker build -t ${env.DOCKER_IMAGE}:${env.GIT_COMMIT} .
-                        docker tag ${env.DOCKER_IMAGE}:${env.GIT_COMMIT} ${env.DOCKER_IMAGE}:latest
+                        docker build -t ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER} .
+                        docker tag ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER} ${env.DOCKER_IMAGE}:latest
                     """
-                    echo "Built Docker image: ${env.DOCKER_IMAGE}:${env.GIT_COMMIT}"
+                    echo "Built Docker image: ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}"
                 }
             }
         }
@@ -67,12 +78,18 @@ pipeline {
                         passwordVariable: 'DOCKER_PASSWORD', 
                         usernameVariable: 'DOCKER_USERNAME'
                     )]) {
-                        sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin'
-                        sh "docker push ${env.DOCKER_IMAGE}:${env.GIT_COMMIT}"
+                        sh '''
+                            export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+                            export PATH=$JAVA_HOME/bin:$PATH
+                            echo "Logging into Docker Hub..."
+                            echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+                        '''
+                        sh "docker push ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}"
                         sh "docker push ${env.DOCKER_IMAGE}:latest"
+                        sh 'docker logout'
                     }
                     
-                    echo "Successfully pushed ${env.DOCKER_IMAGE}:${env.GIT_COMMIT}"
+                    echo "Successfully pushed ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}"
                 }
             }
         }
@@ -82,7 +99,7 @@ pipeline {
                 script {
                     echo 'Updating Helm values...'
                     sh """
-                        sed -i "s+latest+${env.GIT_COMMIT}+g" ${env.CHART_PATH}/values.yaml
+                        sed -i "s+latest+${env.BUILD_NUMBER}+g" ${env.CHART_PATH}/values.yaml
                     """
                 }
             }
@@ -121,7 +138,7 @@ pipeline {
                             helm upgrade --install ${env.RELEASE_NAME} ${env.CHART_PATH} \
                               --namespace ${env.NAMESPACE} \
                               --set image.repository=${env.DOCKER_IMAGE} \
-                              --set image.tag=${env.GIT_COMMIT} \
+                              --set image.tag=${env.BUILD_NUMBER} \
                               --wait --timeout=10m
                         """
                     }
@@ -158,7 +175,8 @@ pipeline {
         always {
             script {
                 // Clean up Docker images to save space
-                sh "docker rmi ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} || true"
+                sh "docker rmi ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER} || true"
+                sh "docker rmi ${env.DOCKER_IMAGE}:latest || true"
                 sh "docker system prune -f || true"
                 
                 echo "Pipeline completed for build ${env.BUILD_NUMBER}"
@@ -168,7 +186,7 @@ pipeline {
         success {
             script {
                 echo "✅ Pipeline completed successfully!"
-                echo "🐳 Docker image: ${env.DOCKER_IMAGE}:${env.GIT_COMMIT}"
+                echo "🐳 Docker image: ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}"
                 echo "🚀 Deployed to namespace: ${env.NAMESPACE}"
                 
                 withCredentials([file(credentialsId: env.KUBECONFIG_CREDENTIAL, variable: 'KUBECONFIG')]) {
@@ -195,7 +213,7 @@ pipeline {
         cleanup {
             script {
                 // Clean up Docker images to save space
-                sh "docker rmi ${env.DOCKER_IMAGE}:${env.GIT_COMMIT} || true"
+                sh "docker rmi ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER} || true"
                 sh "docker system prune -f || true"
             }
             // Clean workspace
