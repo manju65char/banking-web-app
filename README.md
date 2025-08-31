@@ -185,6 +185,7 @@ Go to **Manage Jenkins** → **Manage Plugins** and install:
 - AWS Steps Plugin
 - Git Plugin
 - Maven Integration Plugin
+- Stage view
 - Blue Ocean (optional)
 
 ### Step 14: Configure Jenkins for Docker Access
