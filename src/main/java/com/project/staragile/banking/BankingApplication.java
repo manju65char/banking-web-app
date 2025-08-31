@@ -1,4 +1,4 @@
-package com.project.staragile.banking;
+package com.project.manju.banking;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
