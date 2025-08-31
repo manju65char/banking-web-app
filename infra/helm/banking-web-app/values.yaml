@@ -43,12 +43,8 @@ securityContext:
 
 # Essential environment variables only
 env:
-  - name: SERVER_PORT
-    value: "8083"
   - name: SPRING_PROFILES_ACTIVE
     value: "production"
-
-# Health checks removed - let Kubernetes handle basic container health
 
 service:
   type: ClusterIP
@@ -78,5 +74,3 @@ nodeSelector:
   role: user
 
 tolerations: []
-
-# Pod affinity removed - using simple node selector instead
