@@ -1,4 +1,4 @@
-package com.project.staragile.banking;
+package com.project.manju.banking;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
