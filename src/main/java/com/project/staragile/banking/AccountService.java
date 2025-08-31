@@ -1,4 +1,4 @@
-package com.project.staragile.banking;
+package com.project.manju.banking;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
