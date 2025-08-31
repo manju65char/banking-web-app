@@ -262,6 +262,16 @@ sudo chmod 600 /var/lib/jenkins/.aws/*
 # 3. Restart Jenkins to apply changes
 sudo systemctl daemon-reload  
 sudo systemctl restart jenkins
+
+# 4. Test kubectl as jenkins user
+sudo -u jenkins kubectl get nodes
+sudo -u jenkins kubectl get namespaces
+sudo -u jenkins kubectl get pods -n banking-app
+sudo -u jenkins kubectl get svc -n banking-app
+
+# 5. Test AWS CLI as jenkins user
+sudo -u jenkins aws sts get-caller-identity
+sudo -u jenkins aws eks list-clusters --region us-west-2
 ```
 
 ### Step 19: Create Kubernetes Secrets
