@@ -211,6 +211,11 @@ eksctl create cluster \
   --nodes-max 4 \
   --managed
 
+
+or
+```bash
+eksctl create cluster --name banking-web-app-cluster --region us-west-2 --nodegroup-name banking-nodes --node-type t3.medium --nodes 2 --nodes-min 1 --nodes-max 4 --managed
+
 # Update kubeconfig
 aws eks update-kubeconfig --region us-west-2 --name banking-web-app-cluster
 
