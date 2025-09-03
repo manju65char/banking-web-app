@@ -169,7 +169,7 @@ sudo cat /var/lib/jenkins/secrets/initialAdminPassword
 - Uncheck: "Install automatically"
 
 #### Maven Configuration  
-- Name: `maven-3.9`
+- Name: `maven-3.8.7`
 - MAVEN_HOME: `/usr/share/maven`
 - Uncheck: "Install automatically"
 
