@@ -47,7 +47,7 @@ env:
     value: "production"
 
 service:
-  type: ClusterIP
+  type: loadBalancer
   port: 80
   targetPort: 8083
 
