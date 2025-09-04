@@ -47,7 +47,7 @@ env:
     value: "production"
 
 service:
-  type: loadBalancer
+  type: LoadBalancer
   port: 80
   targetPort: 8083
 
